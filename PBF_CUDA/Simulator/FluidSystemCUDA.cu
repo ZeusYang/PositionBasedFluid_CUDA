@@ -180,7 +180,8 @@ void applyVorticityConfinment(
 	unsigned int numThreads, numBlocks;
 	numThreads = 256;
 	numBlocks = (numParticles % numThreads != 0) ? (numParticles / numThreads + 1) : (numParticles / numThreads);
-	calcVorticityConfinment << <numBlocks, numThreads >> > (
+	cudaDeviceSynchronize();
+	calcVorticityCurl << <numBlocks, numThreads >> > (
 		velocity,
 		deltaPos,
 		predictedPos,
@@ -190,13 +191,21 @@ void applyVorticityConfinment(
 		numParticles);
 	cudaDeviceSynchronize();
 
-	addVorticityConfinment << <numBlocks, numThreads >> > (
+	calcVorticityEta << <numBlocks, numThreads >> > (
 		velocity,
 		deltaPos,
-		deltaTime,
+		predictedPos,
+		cellStart,
+		cellEnd,
+		gridParticleHash,
 		numParticles);
+	cudaDeviceSynchronize();
+	//addVorticityConfinment << <numBlocks, numThreads >> > (
+	//	velocity,
+	//	deltaPos,
+	//	deltaTime,
+	//	numParticles);
 }
-
 
 void applyXSPHViscosity(
 	float4 *velocity,

@@ -87,6 +87,9 @@ namespace Renderer
 		// render system.
 		m_renderSys = make_shared<RenderSystem>();
 		m_renderSys->initialize(m_width, m_height);
+
+		// msaa
+		glEnable(GL_MULTISAMPLE);
 		
 		return true;
 	}

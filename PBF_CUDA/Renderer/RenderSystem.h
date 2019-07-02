@@ -7,6 +7,7 @@
 #include "Drawable/Drawable.h"
 #include "Camera/Camera3D.h"
 #include "Manager/FrameBuffer.h"
+#include "Drawable/LiquidDrawable.h"
 #include "Postprocess/GaussianBlur.h"
 
 namespace Renderer
@@ -48,6 +49,9 @@ namespace Renderer
 		RenderState m_renderState;
 		FrameBuffer::ptr m_shadowDepthBuffer;
 
+		// liquid renderer.
+		LiquidDrawable::ptr m_liquidRenderer;
+
 		// manager.
 		MeshMgr::ptr m_meshMgr;
 		Camera3D::ptr m_camera;
@@ -87,6 +91,7 @@ namespace Renderer
 		void setClearColor(glm::vec4 clearColor);
 		void setCullFace(bool enable, GLenum face);
 		void setDepthTest(bool enable, GLenum func);
+		void setLiquidRenderer(LiquidDrawable::ptr liquid);
 		void addDrawable(Drawable *target) { m_drawableList->addDrawable(target); }
 		void setSunLight(glm::vec3 dir, glm::vec3 amb, glm::vec3 diff, glm::vec3 spec);
 

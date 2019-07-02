@@ -11,6 +11,7 @@ namespace Renderer
 		// view matrix and projection matrix.
 		glm::mat4 m_viewMatrix = glm::mat4(1.0f);
 		glm::mat4 m_projectMatrix = glm::mat4(1.0f);
+		glm::mat4 m_invProjectMatrix = glm::mat4(1.0f);
 		float m_angle, m_aspect, m_near, m_far;
 
 	public:
@@ -33,6 +34,11 @@ namespace Renderer
 
 		// Getter.
 		glm::mat4 getProjectMatrix();
+		glm::mat4 getInvProjectMatrix();
+		float getFovy()const { return m_angle; }
+		float getAspect()const { return m_aspect; }
+		float getNear()const { return m_near; }
+		float getFar() const { return m_far; }
 		virtual glm::vec3 getPosition() = 0;
 		virtual glm::mat4 getViewMatrix() = 0;
 		virtual glm::mat4 getInvViewMatrix() = 0;

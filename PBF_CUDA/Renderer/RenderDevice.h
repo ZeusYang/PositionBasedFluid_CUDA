@@ -42,6 +42,9 @@ namespace Renderer
 		void endFrame();
 		bool shutdown();
 
+		int getWindowWidth()const { return m_width; }
+		int getWindowHeight()const { return m_height; }
+
 		RenderSystem::ptr getRenderSystem() const
 		{
 			return m_renderSys;

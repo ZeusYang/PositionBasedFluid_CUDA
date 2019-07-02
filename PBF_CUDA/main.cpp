@@ -6,6 +6,7 @@
 #include "Renderer/Manager/Geometry.h"
 #include "Renderer/Drawable/InstanceDrawable.h"
 #include "Renderer/Drawable/StaticModelDrawable.h"
+#include "Renderer/Drawable/LiquidDrawable.h"
 #include "Renderer/Drawable/ParticleInstanceDrawable.h"
 #include "Renderer/Drawable/ParticlePointSpriteDrawable.h"
 #include "Renderer/Voxelization.h"
@@ -121,32 +122,45 @@ int main(int argc, char *argv[])
 	tpsCamera->setDistance(90.0f);
 	tpsCamera->setDistanceLimt(0.01f, 1000.0f);
 	tpsCamera->setWheelSensitivity(5.0f);
+
 	FluidDemo demo;
-	//demo.boxFluidDrop(65536, 128, scaleSize.x, 0.3f);
-	//demo.boxFluidDrop(65536, 128, scaleSize.x, 0.35f);
-	demo.boxFluidDrop(128000, 128, scaleSize.x, 0.32f);
-	//demo.boxFluidDrop(256000, 128, scaleSize.x, 0.27f);
-	//demo.boxFluidDrop(256000, 128, scaleSize.x, 0.15f);
-	//demo.boxFluidDrop(512000, 128, scaleSize.x, 0.25f);
+	demo.fluidDeamBreak(128, scaleSize.x, 0.30f);
 	FluidSystem::ptr fluid = demo.getSimulator();
-	ParticleInstanceDrawable *particleDrawable = new ParticleInstanceDrawable(3);
-	particleDrawable->addMesh(particleSphereMesh);
-	//particleDrawable->addMesh(particleCubeMesh);
-	particleDrawable->addTexture(fluidTex);
+
+	ParticlePointSpriteDrawable *particleDrawable = new ParticlePointSpriteDrawable(4);
+	LiquidDrawable *liquidDrawable = new LiquidDrawable(width, height);
+
+	particleDrawable->setBaseColor(glm::vec3(0.2863, 0.8157, 1.0));
 	particleDrawable->setProduceShadow(false);
 	particleDrawable->setParticleRadius(fluid->getSimulateParams().m_particleRadius);
 	particleDrawable->getTransformation()->setTranslation(center);
-	particleDrawable->setInstanceVBO(fluid->getPosVBO(), fluid->getSimulateParams().m_numParticles);
-	renderSys->addDrawable(particleDrawable);
+	particleDrawable->setParticleVBO(fluid->getPosVBO(), fluid->getSimulateParams().m_numParticles);
 
-	renderSys->setGlowBlur(true);
+	liquidDrawable->setParticleRadius(fluid->getSimulateParams().m_particleRadius);
+	liquidDrawable->getTransformation()->setTranslation(center);
+	liquidDrawable->setParticleVBO(fluid->getPosVBO(), fluid->getSimulateParams().m_numParticles);
+
+	renderSys->addDrawable(particleDrawable);
+	renderSys->setLiquidRenderer(std::shared_ptr<LiquidDrawable>(liquidDrawable));
+
+	renderSys->setGlowBlur(false);
 	bool run = false;
 	bool reset = false;
 	bool wallMove = false;
 	float wallMoveSpeed = +10.0f;
 	float curWallPos = -40.0f;
+	bool fluidRendering = true;
+	int curDemo = 0, item = 0;
+	int curBlur = 0, blurItem = 0;
+	const char *blurItems[] = { "Bilateral Blur", "Bilateral Seperate Blur", "Gaussian Blur", "Curvature Flow Blur" };
+	const char *demoItems[] = { "Deam Break", "Sphere Fluid Drop", "Cube Fluid Drop" };
+
 	while (window->run())
 	{
+		// fluid rendering switch.
+		particleDrawable->setVisiable(!fluidRendering);
+		liquidDrawable->setVisiable(fluidRendering);
+
 		// wall movement.
 		if (wallMove)
 		{
@@ -166,10 +180,8 @@ int main(int argc, char *argv[])
 		}
 
 		// simulation.
-		//if(run)
-		//	fluid->simulate(0.0083f);
-		if (run)
-			fluid->simulate(0.012f);
+		if(run)
+			fluid->simulate(0.016f);
 
 		window->beginFrame();
 
@@ -178,10 +190,15 @@ int main(int argc, char *argv[])
 		// Demo setting window.
 		{
 			ImGui::Begin("Fluid simulation");
+			ImGui::Combo("Fluid Demo", &item, demoItems, 3);
+			ImGui::Combo("Blur Algorithm", &blurItem, blurItems, 4);
+			ImGui::Text("Particle Number: %d", fluid->getSimulateParams().m_numParticles);
 			ImGui::SliderFloat("Viscosity", &fluid->getSimulateParams().m_viscosity, 0.0f, 1.0f);
-			ImGui::SliderFloat("Vorticity", &fluid->getSimulateParams().m_vorticity, 0.0f, 0.1f);
+			ImGui::SliderFloat("Vorticity", &fluid->getSimulateParams().m_vorticity, 0.0f, 0.5f);
 			if (ImGui::Button("Wall Movement"))
 				wallMove = !wallMove;
+			if (ImGui::Button("Fluid Rendering"))
+				fluidRendering = !fluidRendering;
 			if (ImGui::Button("Reset"))
 				reset = true;
 			if (ImGui::Button("Run"))
@@ -189,13 +206,36 @@ int main(int argc, char *argv[])
 			ImGui::End();
 		}
 
-		if (reset)
+		if (item != curDemo || reset)
 		{
 			reset = false;
-			demo.boxFluidDrop(65536, 128, scaleSize.x, 0.3f);
-			//demo.boxFluidDrop(35562, 128, scaleSize.x, 0.3f);
+			curDemo = item;
+
+			switch (curDemo)
+			{
+			case 0:
+				demo.fluidDeamBreak(128, scaleSize.x, 0.30f);
+				break;
+			case 1:
+				demo.sphereFluidDrop(128, scaleSize.x, 0.25f);
+				break;
+			case 2:
+				demo.boxFluidDrop(65536, 128, scaleSize.x, 0.30f);
+				break;
+			}
+
+			curWallPos = -40.0f;
+			fluid->getSimulateParams().m_leftWall = curWallPos;
+			container[0]->getTransformation()->setTranslation(glm::vec3(curWallPos, center.y, center.z));
 			fluid = demo.getSimulator();
-			particleDrawable->setInstanceVBO(fluid->getPosVBO(), fluid->getSimulateParams().m_numParticles);
+			particleDrawable->setParticleVBO(fluid->getPosVBO(), fluid->getSimulateParams().m_numParticles);
+			liquidDrawable->setParticleVBO(fluid->getPosVBO(), fluid->getSimulateParams().m_numParticles);
+		}
+
+		if (curBlur != blurItem)
+		{
+			curBlur = blurItem;
+			liquidDrawable->setLiquidBlur(curBlur);
 		}
 
 		window->endFrame();

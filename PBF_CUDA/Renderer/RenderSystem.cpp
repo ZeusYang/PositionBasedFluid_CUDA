@@ -21,6 +21,9 @@ namespace Renderer
 
 	void RenderSystem::initialize(int width, int height)
 	{
+		// liquid renderer.
+		m_liquidRenderer = nullptr;
+
 		// bloom effect.
 		m_glowBlur = nullptr;
 		m_glowBlurEnable = false;
@@ -116,6 +119,11 @@ namespace Renderer
 		m_renderState.m_depthFunc = func;
 	}
 
+	void RenderSystem::setLiquidRenderer(LiquidDrawable::ptr liquid)
+	{
+		m_liquidRenderer = liquid;
+	}
+
 	void RenderSystem::setSunLight(glm::vec3 dir, glm::vec3 amb, 
 		glm::vec3 diff, glm::vec3 spec)
 	{
@@ -151,8 +159,12 @@ namespace Renderer
 		}
 		
 		// glow blur.
-		if (m_glowBlurEnable)
+		if (m_glowBlurEnable || (m_liquidRenderer != nullptr && m_liquidRenderer->isVisiable()))
+		{
+			if(m_glowBlur == nullptr)
+				m_glowBlur = std::shared_ptr<GaussianBlur>(new GaussianBlur(m_width, m_height));
 			m_glowBlur->bindGaussianFramebuffer();
+		}
 
 		glClearColor(m_renderState.m_clearColor.x, m_renderState.m_clearColor.y,
 			m_renderState.m_clearColor.z, m_renderState.m_clearColor.w);
@@ -185,6 +197,15 @@ namespace Renderer
 
 		// render the drawable list.
 		m_drawableList->render(m_camera, m_sunLight, m_lightCamera);
+
+		// render the liquid.
+		if (m_liquidRenderer != nullptr)
+		{
+			unsigned int renderTarget = (m_glowBlurEnable) ? m_glowBlur->getFrameBufferId() : 0;
+			m_liquidRenderer->setBackgroundTexAndRenderTarget(m_glowBlur->getSceneTexIndex(),
+				m_glowBlur->getSceneDepthTexIndex(), renderTarget);
+			m_liquidRenderer->render(m_camera, m_sunLight, m_lightCamera);
+		}
 
 		// realize gaussian blur.
 		if (m_glowBlurEnable)

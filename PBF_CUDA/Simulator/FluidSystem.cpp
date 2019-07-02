@@ -86,7 +86,7 @@ namespace Simulator
 		m_params.m_maxIterNums = 3;
 
 		// smooth kernel radius.
-		m_params.m_sphRadius = 4 * radius;
+		m_params.m_sphRadius = 4.0 * radius;
 		m_params.m_sphRadiusSquared = m_params.m_sphRadius * m_params.m_sphRadius;
 
 		// lagrange multiplier eps.
@@ -94,7 +94,7 @@ namespace Simulator
 		// vorticity force coff.
 		m_params.m_vorticity = 0.001f;
 		// viscosity force coff.
-		m_params.m_viscosity = 0.01f;
+		m_params.m_viscosity = 0.001f;
 
 		// left boundary wall.
 		m_params.m_leftWall = -40.0f;
@@ -108,9 +108,9 @@ namespace Simulator
 		m_params.m_spikyGradCoff = -45.0f / (M_PI * powf(m_params.m_sphRadius, 6.0));
 
 		// grid cells.
-		float cellSize = 4.0f * m_params.m_particleRadius;
+		float cellSize = m_params.m_sphRadius;
 		m_params.m_cellSize = make_float3(cellSize, cellSize, cellSize);
-		m_params.m_gravity = make_float3(0.0f, -9.8f, 0.0f);
+		m_params.m_gravity = make_float3(0.0f, -15.8f, 0.0f);
 		m_params.m_worldOrigin = { -42.0f,-22.0f,-22.0f };
 
 		m_params.m_oneDivWPoly6 = 1.0f / (m_params.m_poly6Coff *
@@ -219,7 +219,7 @@ namespace Simulator
 		//		m_params.m_numParticles);
 		//}
 
-		// apply XSPH viscosity.
+		//// apply XSPH viscosity.
 		//{
 		//	applyXSPHViscosity(
 		//		(float4*)m_deviceVel,
@@ -241,21 +241,29 @@ namespace Simulator
 		m_params.m_invRestDensity = 1.0f / value;
 	}
 
-	void FluidSystem::setParticlePositions(const float * data, int nums)
+	void FluidSystem::setParticlePositions(const float * data, int start, int nums)
 	{
 		cudaGraphicsUnregisterResource(m_cudaPosVBORes);
 		getLastCudaError("setParticlePositions.cudaGraphicsUnregisterResource");
 		glBindBuffer(GL_ARRAY_BUFFER, m_posVBO);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, nums * 4 * sizeof(float), data);
+		glBufferSubData(GL_ARRAY_BUFFER, start * 4 * sizeof(float), nums * 4 * sizeof(float), data);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		cudaGraphicsGLRegisterBuffer(&m_cudaPosVBORes, m_posVBO, cudaGraphicsMapFlagsNone);
 		getLastCudaError("setParticlePositions.cudaGraphicsGLRegisterBuffer");
 	}
 
-	void FluidSystem::setParticleVelocities(const float * data, int nums)
+	void FluidSystem::setParticleVelocities(const float * data, int start, int nums)
 	{
-		cudaMemcpy((char*)m_deviceVel, data, nums * 4 * sizeof(float), cudaMemcpyHostToDevice);
+		cudaMemcpy((char*)m_deviceVel + start * 4 * sizeof(float), data, nums * 4 * sizeof(float),
+			cudaMemcpyHostToDevice);
 		getLastCudaError("setParticleVelocities");
+	}
+
+	void FluidSystem::addParticles(const std::vector<float>& pos, const std::vector<float>& vel, unsigned int num)
+	{
+		setParticlePositions(&pos[0], m_params.m_numParticles, num);
+		setParticleVelocities(&vel[0], m_params.m_numParticles, num);
+		m_params.m_numParticles += num;
 	}
 
 	void FluidSystem::initialize(int numParticles)

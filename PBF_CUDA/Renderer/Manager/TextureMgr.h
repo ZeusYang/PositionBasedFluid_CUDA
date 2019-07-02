@@ -2,6 +2,7 @@
 
 #include <map>
 #include <vector>
+#include <iostream>
 
 #include "Texture.h"
 #include "Singleton.h"
@@ -89,6 +90,13 @@ namespace Renderer
 			return m_units[unit];
 		}
 
+		unsigned int getTextureIndex(const std::string &name)
+		{
+			if (m_unitMap.find(name) == m_unitMap.end())
+				return -1;
+			return m_unitMap[name];
+		}
+
 		bool bindTexture(unsigned int index, unsigned int unit)
 		{
 			if (index >= m_units.size())
@@ -100,7 +108,9 @@ namespace Renderer
 		bool bindTexture(const std::string &name, unsigned int unit)
 		{
 			if (m_unitMap.find(name) == m_unitMap.end())
+			{
 				return false;
+			}
 			m_units[m_unitMap[name]]->bind(unit);
 			return true;
 		}

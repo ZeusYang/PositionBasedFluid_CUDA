@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Manager/TextureMgr.h"
 #include "../Manager/FrameBuffer.h"
 
 namespace Renderer
@@ -24,6 +25,9 @@ namespace Renderer
 		void bindGaussianFramebuffer();
 		void renderGaussianBlurEffect();
 
+		unsigned int getFrameBufferId()const { return m_framebuffer[0]->getFramebufferId(); }
+		unsigned int getSceneTexIndex()const { return TextureMgr::getSingleton()->getTextureIndex("Color0"); }
+		unsigned int getSceneDepthTexIndex()const { return TextureMgr::getSingleton()->getTextureIndex("GaussianDepth0"); }
 		unsigned int &getBlurTimes() { return m_blurTimes; }
 		void setBlurTimes(unsigned int t) { m_blurTimes = t; }
 

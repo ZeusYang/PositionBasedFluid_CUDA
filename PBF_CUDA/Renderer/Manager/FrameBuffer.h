@@ -37,6 +37,7 @@ namespace Renderer
 		void bind();
 		void unBind(int width = -1, int height = -1);
 
+		unsigned int getFramebufferId()const { return m_id; }
 		unsigned int getDepthTexIndex()const { return m_depthTexIndex; }
 		unsigned int getColorTexIndex(int i)const { return m_colorTexIndex[i]; }
 

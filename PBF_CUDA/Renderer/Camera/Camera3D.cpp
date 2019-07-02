@@ -21,17 +21,24 @@ namespace Renderer
 		m_near = near;
 		m_far = far;
 		m_projectMatrix = glm::perspective(glm::radians(angle), aspect, near, far);
+		m_invProjectMatrix = glm::inverse(m_projectMatrix);
 	}
 
 	void Camera3D::setOrthographicProject(float left, float right, float bottom,
 		float top, float near, float far)
 	{
 		m_projectMatrix = glm::ortho(left, right, bottom, top, near, far);
+		m_invProjectMatrix = glm::inverse(m_projectMatrix);
 	}
 
 	glm::mat4 Camera3D::getProjectMatrix()
 	{
 		return m_projectMatrix;
+	}
+
+	glm::mat4 Camera3D::getInvProjectMatrix()
+	{
+		return m_invProjectMatrix;
 	}
 
 }

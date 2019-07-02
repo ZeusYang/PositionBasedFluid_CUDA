@@ -24,6 +24,7 @@
     <ClCompile Include="Renderer\Camera\Transform3D.cpp" />
     <ClCompile Include="Renderer\Drawable\Drawable.cpp" />
     <ClCompile Include="Renderer\Drawable\InstanceDrawable.cpp" />
+    <ClCompile Include="Renderer\Drawable\LiquidDrawable.cpp" />
     <ClCompile Include="Renderer\Drawable\ParticleInstanceDrawable.cpp" />
     <ClCompile Include="Renderer\Drawable\ParticlePointSpriteDrawable.cpp" />
     <ClCompile Include="Renderer\Drawable\StaticModelDrawable.cpp" />
@@ -36,6 +37,7 @@
     <ClCompile Include="Renderer\Manager\ShaderMgr.cpp" />
     <ClCompile Include="Renderer\Manager\Texture.cpp" />
     <ClCompile Include="Renderer\Manager\TextureMgr.cpp" />
+    <ClCompile Include="Renderer\Postprocess\DepthBlurFilter.cpp" />
     <ClCompile Include="Renderer\Postprocess\GaussianBlur.cpp" />
     <ClCompile Include="Renderer\RenderDevice.cpp" />
     <ClCompile Include="Renderer\RenderSystem.cpp" />
@@ -60,6 +62,7 @@
     <ClInclude Include="Renderer\Debug.h" />
     <ClInclude Include="Renderer\Drawable\Drawable.h" />
     <ClInclude Include="Renderer\Drawable\InstanceDrawable.h" />
+    <ClInclude Include="Renderer\Drawable\LiquidDrawable.h" />
     <ClInclude Include="Renderer\Drawable\ParticleInstanceDrawable.h" />
     <ClInclude Include="Renderer\Drawable\ParticlePointSpriteDrawable.h" />
     <ClInclude Include="Renderer\Drawable\StaticModelDrawable.h" />
@@ -73,6 +76,7 @@
     <ClInclude Include="Renderer\Manager\Singleton.h" />
     <ClInclude Include="Renderer\Manager\Texture.h" />
     <ClInclude Include="Renderer\Manager\TextureMgr.h" />
+    <ClInclude Include="Renderer\Postprocess\DepthBlurFilter.h" />
     <ClInclude Include="Renderer\Postprocess\GaussianBlur.h" />
     <ClInclude Include="Renderer\RenderDevice.h" />
     <ClInclude Include="Renderer\RenderSystem.h" />

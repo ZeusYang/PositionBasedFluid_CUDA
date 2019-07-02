@@ -1,5 +1,7 @@
 #include "ParticlePointSpriteDrawable.h"
 
+#include "../RenderDevice.h"
+
 #include <iostream>
 
 namespace Renderer
@@ -91,8 +93,15 @@ namespace Renderer
 	{
 		if (!m_visiable) return;
 
+		// calculate particle size scale factor.
+		float aspect = camera->getAspect();
+		float fovy = camera->getFovy();
+		int width = RenderDevice::getSingleton()->getWindowWidth();
+		float pointScale = 1.0f * width / aspect * (1.0f / tanf(glm::radians(fovy) * 0.5f));
+
 		// render state.
 		glEnable(GL_PROGRAM_POINT_SIZE);
+		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
 		// shader
 		shader = m_shaderMgr->getShader(m_shaderIndex);
@@ -101,6 +110,7 @@ namespace Renderer
 			sunLight->setLightUniform(shader, camera);
 		shader->setInt("image", 0);
 		shader->setVec3("baseColor", m_baseColor);
+		shader->setFloat("pointScale", pointScale);
 		shader->setFloat("pointSize", m_particleRadius);
 		shader->setMat4("modelMatrix", m_transformation.getWorldMatrix());
 		shader->setMat4("viewMatrix", camera->getViewMatrix());

@@ -223,6 +223,7 @@ void calcLagrangeMultiplier(
 		+ gradSum_i.z * gradSum_i.z;
 	
 	// density constraint.
+	predictedPos[index].w = density;
 	float constraint = density * params.m_invRestDensity - 1.0f;
 	float lambda = -(constraint) / (gradSquaredSumTotal + params.m_lambdaEps);
 	velocity[index] = { readVel.x, readVel.y, readVel.z, lambda };
@@ -327,7 +328,7 @@ void updateVelocityAndPosition(
 }
 
 __global__
-void calcVorticityConfinment(
+void calcVorticityCurl(
 	float4 *velocity,
 	float3 *deltaPos,
 	float4 *predictedPos,
@@ -347,7 +348,6 @@ void calcVorticityConfinment(
 	float3 velDiff;
 	float3 gradient;
 	float3 omega = { 0.0f,0.0f,0.0f };
-	float3 eta = { 0.0f,0.0f,0.0f };
 #pragma unroll 3
 	for (int z = -1; z <= 1; ++z)
 	{
@@ -375,42 +375,81 @@ void calcVorticityConfinment(
 					omega.x += f.x;
 					omega.y += f.y;
 					omega.z += f.z;
-					eta.x += gradient.x;
-					eta.y += gradient.y;
-					eta.z += gradient.z;
 				}
 			}
 		}
 	}
-	float omegaLength = sqrtf(omega.x * omega.x + omega.y * omega.y + omega.z * omega.z);
-	float3 force = { 0.0f,0.0f,0.0f };
-	//No direction for eta
-	if (omegaLength == 0.0f)
-	{
-		deltaPos[index] = force;
-		return;
-	}
 
-	// eta.
-	eta.x *= omegaLength;
-	eta.y *= omegaLength;
-	eta.z *= omegaLength;
-	if (eta.x == 0 && eta.y == 0 && eta.z == 0)
-	{
-		deltaPos[index] = force;
-		return;
-	}
+	deltaPos[index] = omega;
+}
 
-	// eta normalize.
+__global__
+void calcVorticityEta(
+	float4 *velocity,
+	float3 *deltaPos,
+	float4 *predictedPos,
+	unsigned int *cellStart,
+	unsigned int *cellEnd,
+	unsigned int *gridParticleHash,
+	unsigned int numParticles)
+{
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	if (index >= numParticles)
+		return;
+	float4 readPos = predictedPos[index];
+	float4 readVel = velocity[index];
+	float3 curPos = { readPos.x, readPos.y, readPos.z };
+	int3 gridPos = calcGridPosKernel(curPos);
+	float3 posDiff;
+	float3 gradient;
+	float3 eta = { 0.0f,0.0f,0.0f };
+#pragma unroll 3
+	for (int z = -1; z <= 1; ++z)
+	{
+#pragma unroll 3
+		for (int y = -1; y <= 1; ++y)
+		{
+#pragma unroll 3
+			for (int x = -1; x <= 1; ++x)
+			{
+				int3 neighbourGridPos = { gridPos.x + x, gridPos.y + y, gridPos.z + z };
+				unsigned int neighbourGridIndex = calcGridHashKernel(neighbourGridPos);
+				unsigned int startIndex = cellStart[neighbourGridIndex];
+				if (startIndex == 0xffffffff)
+					continue;
+				unsigned int endIndex = cellEnd[neighbourGridIndex];
+#pragma unroll 32
+				for (unsigned int i = startIndex; i < endIndex; ++i)
+				{
+					float4 neighbourPos = predictedPos[i];
+					float3 neighbourVor = deltaPos[i];
+					posDiff = { curPos.x - neighbourPos.x, curPos.y - neighbourPos.y , curPos.z - neighbourPos.z };
+					float vorLength = sqrtf(neighbourVor.x * neighbourVor.x
+						+ neighbourVor.y * neighbourVor.y + neighbourVor.z * neighbourVor.z);
+					gradient = wSpikyGrad(posDiff);
+					eta.x += vorLength * gradient.x;
+					eta.y += vorLength * gradient.y;
+					eta.z += vorLength * gradient.z;
+				}
+			}
+		}
+	}
 	float etaLength = sqrtf(eta.x * eta.x + eta.y * eta.y + eta.z * eta.z);
+	if (etaLength == 0.0f)
+	{
+		return;
+	}
 	eta.x /= etaLength;
 	eta.y /= etaLength;
 	eta.z /= etaLength;
-	force = cross(eta, omega);
+	float3 force = cross(eta, deltaPos[index]);
 	force.x *= params.m_vorticity;
 	force.y *= params.m_vorticity;
 	force.z *= params.m_vorticity;
-	deltaPos[index] = force;
+	readVel.x += force.x;
+	readVel.y += force.y;
+	readVel.z += force.z;
+	velocity[index] = readVel;
 }
 
 __global__
@@ -425,6 +464,9 @@ void addVorticityConfinment(
 		return;
 	float4 readVel = velocity[index];
 	float3 vorticity = deltaPos[index];
+
+
+
 	readVel.x += vorticity.x /** deltaTime*/;
 	readVel.y += vorticity.y /** deltaTime*/;
 	readVel.z += vorticity.z /** deltaTime*/;
@@ -476,10 +518,9 @@ void calcXSPHViscosity(
 						curPos.y - neighbourPos.y,
 						curPos.z - neighbourPos.z });
 					velocityDiff = {
-						curVel.x - neighbourVel.x,
-						curVel.y - neighbourVel.y,
-						curVel.z - neighbourVel.z
-					};
+						neighbourVel.x - curVel.x,
+						neighbourVel.y - curVel.y,
+						neighbourVel.z - curVel.z };
 					viscosity.x += velocityDiff.x * wPoly;
 					viscosity.y += velocityDiff.y * wPoly;
 					viscosity.z += velocityDiff.z * wPoly;
@@ -487,6 +528,7 @@ void calcXSPHViscosity(
 			}
 		}
 	}
+
 	viscosity.x *= params.m_viscosity;
 	viscosity.y *= params.m_viscosity;
 	viscosity.z *= params.m_viscosity;
@@ -505,9 +547,9 @@ void addXSPHViscosity(
 		return;
 	float4 readVel = velocity[index];
 	float3 viscosity = deltaPos[index];
-	readVel.x += viscosity.x /** deltaTime*/;
-	readVel.y += viscosity.y /** deltaTime*/;
-	readVel.z += viscosity.z /** deltaTime*/;
+	readVel.x += viscosity.x;
+	readVel.y += viscosity.y;
+	readVel.z += viscosity.z;
 	velocity[index] = readVel;
 }
 

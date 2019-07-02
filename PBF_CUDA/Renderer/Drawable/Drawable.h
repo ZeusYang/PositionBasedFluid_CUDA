@@ -36,6 +36,7 @@ namespace Renderer
 		virtual void getAABB(glm::vec3 &min, glm::vec3 &max){}
 
 		void setVisiable(bool target) { m_visiable = target; }
+		bool isVisiable()const { return m_visiable; }
 		void setProduceShadow(bool target) { m_produceShadow = target; }
 		void setReceiveShadow(bool target) { m_receiveShadow = target; }
 
